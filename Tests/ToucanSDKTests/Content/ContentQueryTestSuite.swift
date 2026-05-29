@@ -5,6 +5,7 @@
 //  Created by Binary Birds on 2025. 04. 15..
 //
 import Foundation
+import Logging
 import Testing
 import ToucanCore
 @testable import ToucanSDK
@@ -1033,5 +1034,81 @@ struct ContentQueryTestSuite {
             logger: .init(label: "ContentQueryTestSuite")
         )
         try #require(results1.count == 3)
+    }
+
+    @Test
+    func orderByLastUpdate() async throws {
+        let now = Date()
+        let contents = try getMockContents(now: now)
+
+        let collector = LogCollector()
+        let logger = Logger(label: "ContentQueryTestSuite") { _ in
+            CollectingLogHandler(collector: collector)
+        }
+
+        let query = Query(
+            contentType: "author",
+            orderBy: [
+                .init(
+                    key: SystemPropertyKeys.lastUpdate.rawValue,
+                    direction: .desc
+                )
+            ]
+        )
+
+        let results = contents.run(
+            query: query,
+            now: now.timeIntervalSince1970,
+            logger: logger
+        )
+
+        try #require(results.count == 3)
+        #expect(
+            !collector.messages.contains {
+                $0.contains("Missing order property key")
+            }
+        )
+    }
+}
+
+/// Collects emitted log messages so tests can assert on them.
+private final class LogCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String] = []
+
+    var messages: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries
+    }
+
+    func record(_ message: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        entries.append(message)
+    }
+}
+
+/// A `LogHandler` that records messages into a `LogCollector`.
+private struct CollectingLogHandler: LogHandler {
+    let collector: LogCollector
+    var metadata: Logger.Metadata = [:]
+    var logLevel: Logger.Level = .trace
+
+    subscript(metadataKey key: String) -> Logger.Metadata.Value? {
+        get { metadata[key] }
+        set { metadata[key] = newValue }
+    }
+
+    func log(
+        level: Logger.Level,
+        message: Logger.Message,
+        metadata: Logger.Metadata?,
+        source: String,
+        file: String,
+        function: String,
+        line: UInt
+    ) {
+        collector.record(message.description)
     }
 }

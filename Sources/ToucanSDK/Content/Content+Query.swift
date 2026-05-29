@@ -88,14 +88,27 @@ public extension [Content] {
         using query: Query,
         logger: Logger
     ) -> [Content] {
+        // Resolve query fields once per content. Query fields combine each
+        // content's own properties with system properties (`id`, `slug`,
+        // `lastUpdate`), so filtering and ordering reference the same keys.
+        let queryFieldsByID = contents.reduce(
+            into: [String: [String: AnyCodable]]()
+        ) { result, content in
+            result[content.typeAwareID] = content.queryFields
+        }
+
         var filteredContents = contents.filter { element in
-            evaluate(condition: query.filter, with: element.queryFields)
+            evaluate(
+                condition: query.filter,
+                with: queryFieldsByID[element.typeAwareID] ?? [:]
+            )
         }
 
         for order in query.orderBy.reversed() {
             filteredContents.sort { a, b in
                 let propertyForOrderKey: (Content) -> AnyCodable? = { item in
-                    guard let value = item.properties[order.key] else {
+                    let fields = queryFieldsByID[item.typeAwareID]
+                    guard let value = fields?[order.key] else {
                         logger.warning(
                             "Missing order property key: `\(order.key)`.",
                             metadata: [
