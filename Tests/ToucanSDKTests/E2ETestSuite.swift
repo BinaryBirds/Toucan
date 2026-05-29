@@ -187,9 +187,9 @@ struct E2ETestSuite {
                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                     <url>
 
-                        <loc>http://localhost:3000/blog/posts/pages/1/</loc>
-                        <lastmod>\#(nowString)</lastmod>
                         <loc>http://localhost:3000/blog/posts/pages/2/</loc>
+                        <lastmod>\#(nowString)</lastmod>
+                        <loc>http://localhost:3000/blog/posts/pages/1/</loc>
                         <lastmod>\#(nowString)</lastmod>
                         <loc>http://localhost:3000/pages/page-3/</loc>
                         <lastmod>\#(nowString)</lastmod>
